@@ -5,11 +5,11 @@ export interface GitHubEnterpriseConfig {
   baseUrl: string;
   apiUrl: string;
   graphqlUrl: string;
-  personalAccessToken?: string;
-  appId?: string;
-  clientId?: string;
-  clientSecret?: string;
-  privateKey?: string;
+  personalAccessToken?: string | undefined;
+  appId?: string | undefined;
+  clientId?: string | undefined;
+  clientSecret?: string | undefined;
+  privateKey?: string | undefined;
 }
 
 export class GitHubEnterpriseService {
@@ -195,7 +195,7 @@ export class GitHubEnterpriseService {
       return {
         status: 'unhealthy',
         details: {
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Unknown error',
           apiUrl: this.config.apiUrl,
           authenticated: !!this.config.personalAccessToken,
         },

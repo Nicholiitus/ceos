@@ -1,5 +1,4 @@
 {
-  "github-enterprise.uri": "https://github.yourcompany.com",
   "githubPullRequests.remotes": [
     "origin",
     "upstream"

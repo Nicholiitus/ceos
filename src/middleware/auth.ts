@@ -69,16 +69,16 @@ export const authenticateToken = async (
       req.githubToken = decoded.githubToken;
 
       next();
-    } catch (githubError) {
+    } catch (githubError: any) {
       logger.warn('GitHub token validation failed', {
-        error: githubError.message,
+        error: githubError?.message || 'Unknown error',
         userId: decoded.userId,
       });
       res.status(401).json({ error: 'Invalid or expired GitHub token' });
       return;
     }
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
+  } catch (error: any) {
+    if (error?.name === 'TokenExpiredError') {
       res.status(401).json({ error: 'Token expired' });
       return;
     }
@@ -146,9 +146,9 @@ export const requireAdminAccess = async (
       }
 
       next();
-    } catch (membershipError) {
+    } catch (membershipError: any) {
       logger.warn('Failed to check organization membership', {
-        error: membershipError.message,
+        error: membershipError?.message || 'Unknown error',
         userId: req.user.id,
         organization: orgName,
       });
@@ -180,5 +180,5 @@ export const generateUserToken = (user: any, githubToken: string): string => {
 
   return jwt.sign(payload, jwtSecret, { 
     expiresIn: process.env.JWT_EXPIRES_IN || '24h' 
-  });
+  } as jwt.SignOptions);
 };
