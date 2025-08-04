@@ -1,0 +1,250 @@
+# CEOS Identity Service Configuration
+
+# Repository-specific settings
+repository:
+  name: "ceos-identity"
+  owner: "{{ REPO_OWNER }}"
+  description: "CEOS Identity and Authentication Service - Centralized user management and SSO integration"
+  private: true
+  topics:
+    - "authentication"
+    - "oauth2"
+    - "saml"
+    - "identity"
+    - "microservice"
+    - "ceos"
+
+# Technology stack
+technology:
+  language: "typescript"
+  framework: "express"
+  database: "postgresql"
+  cache: "redis"
+  message_queue: "rabbitmq"
+
+# Environment-specific configurations
+environments:
+  development:
+    database_url: "postgresql://localhost:5432/ceos_identity_dev"
+    redis_url: "redis://localhost:6379"
+    log_level: "debug"
+    oauth_redirect_urls:
+      - "http://localhost:3000/auth/callback"
+  
+  staging:
+    database_url: "${DATABASE_URL}"
+    redis_url: "${REDIS_URL}"
+    log_level: "info"
+    oauth_redirect_urls:
+      - "https://staging.ceos.dev/auth/callback"
+  
+  production:
+    database_url: "${DATABASE_URL}"
+    redis_url: "${REDIS_URL}"
+    log_level: "warn"
+    oauth_redirect_urls:
+      - "https://app.ceos.dev/auth/callback"
+
+# Service-specific features
+features:
+  oauth2:
+    enabled: true
+    providers:
+      - "github"
+      - "microsoft"
+      - "google"
+      - "okta"
+  
+  saml:
+    enabled: true
+    providers:
+      - "active_directory"
+      - "okta"
+      - "auth0"
+  
+  ldap:
+    enabled: true
+    connection_timeout: 30000
+  
+  mfa:
+    enabled: true
+    providers:
+      - "totp"
+      - "sms"
+      - "email"
+      - "webauthn"
+  
+  session_management:
+    enabled: true
+    timeout: 86400  # 24 hours
+    refresh_token_rotation: true
+
+# API configuration
+api:
+  version: "v1"
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+    burst_limit: 200
+  
+  cors:
+    enabled: true
+    origins:
+      - "https://app.ceos.dev"
+      - "https://dashboard.ceos.dev"
+      - "http://localhost:3000"  # Development only
+  
+  swagger:
+    enabled: true
+    path: "/docs"
+
+# Database configuration
+database:
+  migrations:
+    enabled: true
+    auto_migrate: false  # Manual migration in production
+  
+  connection_pool:
+    min: 2
+    max: 10
+    idle_timeout: 30000
+  
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention_days: 30
+
+# Security configuration
+security:
+  jwt:
+    algorithm: "RS256"
+    expires_in: "15m"
+    refresh_expires_in: "7d"
+  
+  password_policy:
+    min_length: 12
+    require_uppercase: true
+    require_lowercase: true
+    require_numbers: true
+    require_symbols: true
+    max_age_days: 90
+  
+  encryption:
+    algorithm: "AES-256-GCM"
+    key_rotation_days: 90
+  
+  audit_logging:
+    enabled: true
+    events:
+      - "login_success"
+      - "login_failure"
+      - "password_change"
+      - "mfa_setup"
+      - "oauth_consent"
+
+# Monitoring and observability
+monitoring:
+  health_checks:
+    enabled: true
+    endpoints:
+      - "/health"
+      - "/health/detailed"
+      - "/health/ready"
+  
+  metrics:
+    enabled: true
+    provider: "prometheus"
+    endpoint: "/metrics"
+  
+  tracing:
+    enabled: true
+    provider: "opentelemetry"
+    sample_rate: 0.1  # 10% sampling
+  
+  alerts:
+    - name: "high_error_rate"
+      condition: "error_rate > 5%"
+      severity: "warning"
+    - name: "authentication_failures"
+      condition: "failed_logins > 100/hour"
+      severity: "critical"
+
+# Dependencies
+dependencies:
+  internal:
+    - "ceos-shared"
+  
+  external:
+    - name: "postgresql"
+      version: ">=13"
+      required: true
+    - name: "redis"
+      version: ">=6"
+      required: true
+    - name: "rabbitmq"
+      version: ">=3.8"
+      required: false
+
+# Deployment configuration
+deployment:
+  container:
+    port: 3000
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+  
+  scaling:
+    min_replicas: 2
+    max_replicas: 10
+    target_cpu_utilization: 70
+  
+  service_mesh:
+    enabled: true
+    mTLS: true
+
+# Template variables specific to this repository
+variables:
+  SERVICE_NAME: "Identity Service"
+  SERVICE_DESCRIPTION: "Centralized authentication and user management"
+  API_PREFIX: "/api/v1/auth"
+  DEFAULT_PORT: "3001"
+  HEALTH_CHECK_PATH: "/health/ready"
+
+# Provisioning scripts specific to this repository
+provisioning:
+  scripts:
+    - name: "setup-database"
+      command: "npm run db:setup"
+      description: "Initialize database schema and seed data"
+    - name: "configure-oauth"
+      command: "npm run oauth:configure"
+      description: "Configure OAuth providers"
+    - name: "setup-certificates"
+      command: "npm run certs:generate"
+      description: "Generate JWT signing certificates"
+
+# Git configuration
+git:
+  # Branch protection for this specific repository
+  branch_protection:
+    main:
+      required_status_checks:
+        strict: true
+        contexts:
+          - "ci/build"
+          - "ci/test"
+          - "ci/security-scan"
+          - "ci/integration-tests"
+      required_pull_request_reviews:
+        required_approving_review_count: 2  # Higher requirement for identity service
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+      enforce_admins: false
+      restrictions: null
+
+# Auto-push configuration
+auto_push: true

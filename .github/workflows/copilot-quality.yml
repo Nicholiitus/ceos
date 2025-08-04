@@ -1,8 +1,8 @@
-name: "GitHub Copilot Quality Gate"
+name: 'GitHub Copilot Quality Gate'
 
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   copilot-quality-check:
@@ -14,83 +14,83 @@ jobs:
       checks: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Copilot Code Review
-      uses: github/super-linter@v5
-      env:
-        DEFAULT_BRANCH: main
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        VALIDATE_ALL_CODEBASE: false
-        VALIDATE_TYPESCRIPT_ES: true
-        VALIDATE_JAVASCRIPT_ES: true
-        VALIDATE_JSON: true
-        VALIDATE_YAML: true
-        VALIDATE_DOCKERFILE: true
-        TYPESCRIPT_ES_CONFIG_FILE: '.eslintrc.js'
+      - name: Copilot Code Review
+        uses: github/super-linter@v5
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_TYPESCRIPT_ES: true
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_JSON: true
+          VALIDATE_YAML: true
+          VALIDATE_DOCKERFILE: true
+          TYPESCRIPT_ES_CONFIG_FILE: '.eslintrc.js'
 
-    - name: Code Quality Metrics
-      run: |
-        echo "## 🤖 Copilot Code Quality Report" > copilot-report.md
-        echo "### TypeScript/JavaScript Analysis" >> copilot-report.md
-        
-        # Run ESLint with detailed output
-        npx eslint . --ext .ts,.js --format json > eslint-results.json || true
-        
-        # Calculate code complexity
-        npx complexity-report src/ --format json > complexity-results.json || true
-        
-        # Generate test coverage report
-        npm run test:coverage || true
-        
-        echo "### Code Metrics Summary" >> copilot-report.md
-        echo "- Files analyzed: $(find src -name '*.ts' -o -name '*.js' | wc -l)" >> copilot-report.md
-        echo "- Lines of code: $(find src -name '*.ts' -o -name '*.js' -exec wc -l {} + | tail -1 | awk '{print $1}')" >> copilot-report.md
+      - name: Code Quality Metrics
+        run: |
+          echo "## 🤖 Copilot Code Quality Report" > copilot-report.md
+          echo "### TypeScript/JavaScript Analysis" >> copilot-report.md
 
-    - name: AI-Assisted Code Suggestions
-      run: |
-        echo "## 🚀 AI-Powered Improvement Suggestions" >> copilot-report.md
-        echo "### Security Recommendations" >> copilot-report.md
-        echo "- ✅ All environment variables properly secured" >> copilot-report.md
-        echo "- ✅ Input validation implemented" >> copilot-report.md
-        echo "- ✅ Authentication middleware active" >> copilot-report.md
-        echo "### Performance Optimizations" >> copilot-report.md
-        echo "- 📊 Consider implementing request caching" >> copilot-report.md
-        echo "- 📊 Database connection pooling recommended" >> copilot-report.md
-        echo "- 📊 API rate limiting configured" >> copilot-report.md
+          # Run ESLint with detailed output
+          npx eslint . --ext .ts,.js --format json > eslint-results.json || true
 
-    - name: Upload Quality Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: copilot-quality-report
-        path: |
-          copilot-report.md
-          eslint-results.json
-          complexity-results.json
-          coverage/
+          # Calculate code complexity
+          npx complexity-report src/ --format json > complexity-results.json || true
 
-    - name: Comment PR with Quality Report
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          const report = fs.readFileSync('copilot-report.md', 'utf8');
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: report
-          });
+          # Generate test coverage report
+          npm run test:coverage || true
+
+          echo "### Code Metrics Summary" >> copilot-report.md
+          echo "- Files analyzed: $(find src -name '*.ts' -o -name '*.js' | wc -l)" >> copilot-report.md
+          echo "- Lines of code: $(find src -name '*.ts' -o -name '*.js' -exec wc -l {} + | tail -1 | awk '{print $1}')" >> copilot-report.md
+
+      - name: AI-Assisted Code Suggestions
+        run: |
+          echo "## 🚀 AI-Powered Improvement Suggestions" >> copilot-report.md
+          echo "### Security Recommendations" >> copilot-report.md
+          echo "- ✅ All environment variables properly secured" >> copilot-report.md
+          echo "- ✅ Input validation implemented" >> copilot-report.md
+          echo "- ✅ Authentication middleware active" >> copilot-report.md
+          echo "### Performance Optimizations" >> copilot-report.md
+          echo "- 📊 Consider implementing request caching" >> copilot-report.md
+          echo "- 📊 Database connection pooling recommended" >> copilot-report.md
+          echo "- 📊 API rate limiting configured" >> copilot-report.md
+
+      - name: Upload Quality Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: copilot-quality-report
+          path: |
+            copilot-report.md
+            eslint-results.json
+            complexity-results.json
+            coverage/
+
+      - name: Comment PR with Quality Report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('copilot-report.md', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });

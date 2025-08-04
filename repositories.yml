@@ -1,0 +1,246 @@
+# CEOS Managed Repositories Configuration
+
+# List of repositories managed by this meta-repo
+repositories:
+  # Identity and Authentication Service
+  - name: "ceos-identity"
+    owner: "Nicholiitus"
+    description: "CEOS Identity and Authentication Service - Centralized user management and SSO integration"
+    type: "microservice"
+    technology: "typescript"
+    dependencies:
+      - "ceos-shared"
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "oauth2"
+      - "saml"
+      - "ldap"
+      - "mfa"
+
+  # Orchestration Engine
+  - name: "ceos-orchestration"
+    owner: "Nicholiitus"
+    description: "CEOS Orchestration Engine - Workflow management and automation orchestration"
+    type: "core-service"
+    technology: "typescript"
+    dependencies:
+      - "ceos-shared"
+      - "ceos-identity"
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "workflow-engine"
+      - "job-scheduling"
+      - "event-processing"
+      - "resource-management"
+
+  # Analytics and Reporting Service
+  - name: "ceos-analytics"
+    owner: "Nicholiitus"
+    description: "CEOS Analytics and Reporting Service - Usage analytics, performance metrics, and business intelligence"
+    type: "microservice"
+    technology: "typescript"
+    dependencies:
+      - "ceos-shared"
+      - "ceos-identity"
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "usage-tracking"
+      - "performance-metrics"
+      - "custom-reports"
+      - "data-visualization"
+
+  # Shared Libraries and Components
+  - name: "ceos-shared"
+    owner: "Nicholiitus"
+    description: "CEOS Shared Libraries - Common components, utilities, and type definitions"
+    type: "library"
+    technology: "typescript"
+    dependencies: []
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "common-types"
+      - "utility-functions"
+      - "shared-components"
+      - "api-clients"
+
+  # Web Dashboard
+  - name: "ceos-dashboard"
+    owner: "Nicholiitus"
+    description: "CEOS Web Dashboard - Administrative interface and user portal"
+    type: "frontend"
+    technology: "react"
+    dependencies:
+      - "ceos-shared"
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "admin-interface"
+      - "user-portal"
+      - "real-time-monitoring"
+      - "configuration-management"
+
+  # Mobile Application
+  - name: "ceos-mobile"
+    owner: "Nicholiitus"
+    description: "CEOS Mobile Application - iOS and Android mobile interface"
+    type: "mobile"
+    technology: "react-native"
+    dependencies:
+      - "ceos-shared"
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "mobile-interface"
+      - "push-notifications"
+      - "offline-support"
+      - "biometric-auth"
+
+  # API Gateway
+  - name: "ceos-gateway"
+    owner: "Nicholiitus"
+    description: "CEOS API Gateway - Centralized API management, routing, and security"
+    type: "infrastructure"
+    technology: "typescript"
+    dependencies:
+      - "ceos-shared"
+      - "ceos-identity"
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "api-routing"
+      - "rate-limiting"
+      - "request-transformation"
+      - "security-policies"
+
+  # Configuration Service
+  - name: "ceos-config"
+    owner: "Nicholiitus"
+    description: "CEOS Configuration Service - Centralized configuration management and feature flags"
+    type: "microservice"
+    technology: "typescript"
+    dependencies:
+      - "ceos-shared"
+      - "ceos-identity"
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "configuration-management"
+      - "feature-flags"
+      - "environment-specific-configs"
+      - "real-time-updates"
+
+  # Documentation and Developer Portal
+  - name: "ceos-docs"
+    owner: "Nicholiitus"
+    description: "CEOS Documentation - Developer portal, API documentation, and user guides"
+    type: "documentation"
+    technology: "static-site"
+    dependencies: []
+    environments:
+      - "development"
+      - "production"
+    features:
+      - "api-documentation"
+      - "developer-guides"
+      - "user-manuals"
+      - "interactive-examples"
+
+  # Infrastructure as Code
+  - name: "ceos-infrastructure"
+    owner: "Nicholiitus"
+    description: "CEOS Infrastructure - Terraform/Bicep templates and deployment configurations"
+    type: "infrastructure"
+    technology: "terraform"
+    dependencies: []
+    environments:
+      - "development"
+      - "staging"
+      - "production"
+    features:
+      - "cloud-infrastructure"
+      - "kubernetes-manifests"
+      - "monitoring-setup"
+      - "security-policies"
+
+# Repository groupings for batch operations
+repository_groups:
+  core_services:
+    - "ceos-identity"
+    - "ceos-orchestration"
+    - "ceos-gateway"
+    - "ceos-config"
+  
+  user_interfaces:
+    - "ceos-dashboard"
+    - "ceos-mobile"
+    - "ceos-docs"
+  
+  data_services:
+    - "ceos-analytics"
+  
+  infrastructure:
+    - "ceos-infrastructure"
+    - "ceos-gateway"
+  
+  libraries:
+    - "ceos-shared"
+
+# Deployment dependencies (repositories that must be deployed in order)
+deployment_order:
+  - ["ceos-shared"]
+  - ["ceos-identity", "ceos-config"]
+  - ["ceos-gateway", "ceos-orchestration"]
+  - ["ceos-analytics", "ceos-dashboard"]
+  - ["ceos-mobile", "ceos-docs"]
+  - ["ceos-infrastructure"]
+
+# Cross-repository settings
+cross_repository:
+  # Shared secrets that should be available to all repositories
+  shared_secrets:
+    - "DOCKER_REGISTRY_PASSWORD"
+    - "NPM_TOKEN"
+    - "SONAR_TOKEN"
+    - "SLACK_WEBHOOK_URL"
+  
+  # Common GitHub Actions workflows to apply to all repositories
+  common_workflows:
+    - "ci-cd-pipeline"
+    - "security-scanning"
+    - "dependency-updates"
+    - "code-quality-checks"
+  
+  # Branch protection rules to apply consistently
+  branch_protection:
+    main:
+      enforce_admins: false
+      required_status_checks:
+        strict: true
+        contexts:
+          - "ci/build"
+          - "ci/test"
+          - "ci/security-scan"
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true

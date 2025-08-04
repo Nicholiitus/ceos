@@ -1,12 +1,12 @@
-name: "Dependency Security Scan"
+name: 'Dependency Security Scan'
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 6 * * 1'  # Weekly on Mondays at 6:00 AM UTC
+    - cron: '0 6 * * 1' # Weekly on Mondays at 6:00 AM UTC
 
 jobs:
   dependency-scan:
@@ -18,70 +18,70 @@ jobs:
       actions: read
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run npm audit
-      run: |
-        npm audit --audit-level=moderate --json > npm-audit-results.json || true
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate --json > npm-audit-results.json || true
 
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/node@master
-      continue-on-error: true
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --severity-threshold=medium --file=package.json
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=medium --file=package.json
 
-    - name: Upload Snyk results to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: snyk.sarif
+      - name: Upload Snyk results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk.sarif
 
-    - name: OWASP Dependency Check
-      uses: dependency-check/Dependency-Check_Action@main
-      id: depcheck
-      with:
-        project: 'CEOS'
-        path: '.'
-        format: 'SARIF'
-        args: >
-          --enableRetired
-          --enableExperimental
-          --failOnCVSS 7
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        id: depcheck
+        with:
+          project: 'CEOS'
+          path: '.'
+          format: 'SARIF'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --failOnCVSS 7
 
-    - name: Upload OWASP Dependency Check results
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: ${{ github.workspace }}/reports/dependency-check-report.sarif
+      - name: Upload OWASP Dependency Check results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ${{ github.workspace }}/reports/dependency-check-report.sarif
 
-    - name: Generate Security Report
-      run: |
-        echo "## 🔒 Security Scan Results" > security-report.md
-        echo "### NPM Audit Results" >> security-report.md
-        if [ -f "npm-audit-results.json" ]; then
-          echo "\`\`\`json" >> security-report.md
-          cat npm-audit-results.json >> security-report.md
-          echo "\`\`\`" >> security-report.md
-        fi
+      - name: Generate Security Report
+        run: |
+          echo "## 🔒 Security Scan Results" > security-report.md
+          echo "### NPM Audit Results" >> security-report.md
+          if [ -f "npm-audit-results.json" ]; then
+            echo "\`\`\`json" >> security-report.md
+            cat npm-audit-results.json >> security-report.md
+            echo "\`\`\`" >> security-report.md
+          fi
 
-    - name: Upload security artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-scan-results
-        path: |
-          npm-audit-results.json
-          security-report.md
-          reports/
+      - name: Upload security artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-scan-results
+          path: |
+            npm-audit-results.json
+            security-report.md
+            reports/

@@ -1,0 +1,149 @@
+# CEOS Meta-Repo Bootstrap Configuration
+
+# Global settings for all repositories
+global:
+  # Default organization/owner for repositories
+  default_owner: "Nicholiitus"
+  
+  # Default branch name for new repositories
+  default_branch: "main"
+  
+  # Global template variables available to all repositories
+  variables:
+    ORGANIZATION: "CEOS Enterprise"
+    COPYRIGHT_YEAR: "2025"
+    LICENSE: "MIT"
+    CEOS_VERSION: "1.0.0"
+    SUPPORT_EMAIL: "support@ceos.dev"
+  
+  # Default repository settings
+  repository_defaults:
+    private: true
+    auto_init: true
+    gitignore_template: "Node"
+    license_template: "mit"
+    allow_squash_merge: true
+    allow_merge_commit: false
+    allow_rebase_merge: true
+    delete_branch_on_merge: true
+    has_issues: true
+    has_projects: true
+    has_wiki: false
+    vulnerability_alerts: true
+    automated_security_fixes: true
+
+# Template processing settings
+templates:
+  # File extensions to process for variable replacement
+  process_extensions:
+    - ".md"
+    - ".yml"
+    - ".yaml"
+    - ".json"
+    - ".js"
+    - ".ts"
+    - ".sh"
+    - ".ps1"
+    - ".dockerfile"
+    - ".gitignore"
+  
+  # Files to exclude from template processing
+  exclude_files:
+    - "node_modules/**"
+    - ".git/**"
+    - "*.bin"
+    - "*.jpg"
+    - "*.png"
+    - "*.gif"
+    - "*.ico"
+
+# Provisioning settings
+provisioning:
+  # Global scripts execution order
+  script_execution_order:
+    - "01-setup-environment"
+    - "02-install-dependencies"
+    - "03-configure-security"
+    - "04-setup-ci-cd"
+    - "05-finalize-setup"
+  
+  # Environment variables passed to provisioning scripts
+  environment:
+    NODE_VERSION: "18"
+    NPM_REGISTRY: "https://registry.npmjs.org/"
+    DOCKER_BUILDKIT: "1"
+    CEOS_ENVIRONMENT: "production"
+
+# Security settings
+security:
+  # Required security workflows for all repositories
+  required_workflows:
+    - "codeql-analysis"
+    - "dependency-security"
+    - "secret-scanning"
+  
+  # Default branch protection rules
+  branch_protection:
+    enforce_admins: false
+    required_status_checks:
+      strict: true
+      contexts:
+        - "ci/tests"
+        - "ci/security-scan"
+    required_pull_request_reviews:
+      required_approving_review_count: 1
+      dismiss_stale_reviews: true
+      require_code_owner_reviews: true
+    restrictions: null
+
+# Notification settings
+notifications:
+  # Slack webhook for bootstrap notifications
+  slack_webhook: null
+  
+  # Email notifications
+  email_notifications:
+    enabled: false
+    recipients: []
+  
+  # GitHub issue creation for failed bootstraps
+  create_issues_on_failure: true
+
+# Retry and error handling
+error_handling:
+  # Maximum retry attempts for failed operations
+  max_retries: 3
+  
+  # Retry delay in seconds
+  retry_delay: 30
+  
+  # Continue on non-critical errors
+  continue_on_error: true
+  
+  # Critical error patterns that should stop execution
+  critical_error_patterns:
+    - "authentication failed"
+    - "repository not found"
+    - "insufficient permissions"
+
+# Logging and monitoring
+logging:
+  # Log level (debug, info, warn, error)
+  level: "info"
+  
+  # Enable detailed logging for troubleshooting
+  verbose: false
+  
+  # Log bootstrap metrics
+  metrics_enabled: true
+
+# Performance settings
+performance:
+  # Maximum parallel repository bootstraps
+  max_parallel_bootstraps: 3
+  
+  # Timeout for individual operations (in minutes)
+  operation_timeout: 30
+  
+  # Enable caching for template processing
+  enable_caching: true

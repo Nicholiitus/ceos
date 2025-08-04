@@ -1,0 +1,641 @@
+name: CEOS Meta-Repo Bootstrap
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'meta-config/**'
+      - 'templates/**'
+      - 'provisioning/**'
+      - 'repositories.yml'
+      - 'bootstrap-config.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'meta-config/**'
+      - 'templates/**'
+      - 'provisioning/**'
+      - 'repositories.yml'
+      - 'bootstrap-config.yml'
+  workflow_dispatch:
+    inputs:
+      target_repos:
+        description: 'Comma-separated list of repositories to bootstrap (leave empty for all)'
+        required: false
+        type: string
+      force_update:
+        description: 'Force update even if no changes detected'
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Perform dry run without making actual changes'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CEOS_PAT: ${{ secrets.CEOS_GITHUB_PAT }}
+  BOOTSTRAP_VERSION: "1.0.0"
+
+jobs:
+  detect-changes:
+    name: Detect Repository Changes
+    runs-on: ubuntu-latest
+    outputs:
+      changed-repos: ${{ steps.detect.outputs.changed-repos }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+      bootstrap-config: ${{ steps.config.outputs.bootstrap-config }}
+    steps:
+      - name: Checkout Meta-Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ env.CEOS_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install js-yaml @octokit/rest
+
+      - name: Load Bootstrap Configuration
+        id: config
+        run: |
+          if [ -f "bootstrap-config.yml" ]; then
+            echo "bootstrap-config=$(cat bootstrap-config.yml | base64 -w 0)" >> $GITHUB_OUTPUT
+          else
+            echo "bootstrap-config=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Detect Changed Repositories
+        id: detect
+        run: |
+          cat << 'EOF' > detect-changes.js
+          const fs = require('fs');
+          const yaml = require('js-yaml');
+          const { execSync } = require('child_process');
+
+          async function detectChanges() {
+            try {
+              // Load repositories configuration
+              let repositories = [];
+              if (fs.existsSync('repositories.yml')) {
+                const repoConfig = yaml.load(fs.readFileSync('repositories.yml', 'utf8'));
+                repositories = repoConfig.repositories || [];
+              }
+
+              // Get changed files since last commit
+              let changedFiles = [];
+              try {
+                const gitDiff = execSync('git diff --name-only HEAD~1 HEAD', { encoding: 'utf8' });
+                changedFiles = gitDiff.trim().split('\n').filter(f => f);
+              } catch (error) {
+                console.log('No previous commit found, treating as initial setup');
+                changedFiles = ['*'];
+              }
+
+              // Check for manual trigger with specific repos
+              const targetRepos = process.env.TARGET_REPOS;
+              if (targetRepos) {
+                const manualRepos = targetRepos.split(',').map(r => r.trim());
+                console.log(`Manual trigger for repositories: ${manualRepos.join(', ')}`);
+                return {
+                  changedRepos: manualRepos,
+                  hasChanges: true,
+                  trigger: 'manual'
+                };
+              }
+
+              // Detect affected repositories based on changed files
+              const affectedRepos = new Set();
+
+              // Check global changes that affect all repos
+              const globalChanges = changedFiles.some(file => 
+                file.startsWith('templates/') || 
+                file.startsWith('provisioning/') ||
+                file === 'bootstrap-config.yml' ||
+                file === 'repositories.yml'
+              );
+
+              if (globalChanges || process.env.FORCE_UPDATE === 'true') {
+                repositories.forEach(repo => affectedRepos.add(repo.name));
+              }
+
+              // Check repo-specific changes
+              changedFiles.forEach(file => {
+                if (file.startsWith('meta-config/')) {
+                  const pathParts = file.split('/');
+                  if (pathParts.length >= 2) {
+                    const repoName = pathParts[1];
+                    affectedRepos.add(repoName);
+                  }
+                }
+              });
+
+              const result = {
+                changedRepos: Array.from(affectedRepos),
+                hasChanges: affectedRepos.size > 0,
+                trigger: 'auto'
+              };
+
+              console.log('Detection result:', JSON.stringify(result, null, 2));
+              return result;
+            } catch (error) {
+              console.error('Error detecting changes:', error);
+              return { changedRepos: [], hasChanges: false, trigger: 'error' };
+            }
+          }
+
+          detectChanges().then(result => {
+            console.log(`changed-repos=${result.changedRepos.join(',')}`);
+            console.log(`has-changes=${result.hasChanges}`);
+            
+            // Set GitHub Actions outputs
+            const fs = require('fs');
+            const output = process.env.GITHUB_OUTPUT;
+            fs.appendFileSync(output, `changed-repos=${result.changedRepos.join(',')}\n`);
+            fs.appendFileSync(output, `has-changes=${result.hasChanges}\n`);
+          });
+          EOF
+
+          export TARGET_REPOS="${{ github.event.inputs.target_repos }}"
+          export FORCE_UPDATE="${{ github.event.inputs.force_update }}"
+          node detect-changes.js
+
+  bootstrap-repositories:
+    name: Bootstrap Repository
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      matrix:
+        repository: ${{ fromJson(format('["{0}"]', join(fromJson(format('["{0}"]', needs.detect-changes.outputs.changed-repos)), '", "'))) }}
+      fail-fast: false
+      max-parallel: 3
+    steps:
+      - name: Checkout Meta-Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ env.CEOS_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install js-yaml @octokit/rest
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Load Configuration
+        id: config
+        run: |
+          # Load bootstrap configuration
+          if [ -f "bootstrap-config.yml" ]; then
+            echo "Bootstrap configuration found"
+            cat bootstrap-config.yml
+          fi
+
+          # Load repository-specific configuration
+          if [ -f "meta-config/${{ matrix.repository }}/config.yml" ]; then
+            echo "Repository-specific configuration found for ${{ matrix.repository }}"
+            cat "meta-config/${{ matrix.repository }}/config.yml"
+          fi
+
+      - name: Bootstrap Repository - ${{ matrix.repository }}
+        id: bootstrap
+        env:
+          REPOSITORY_NAME: ${{ matrix.repository }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          cat << 'EOF' > bootstrap-repo.js
+          const fs = require('fs');
+          const path = require('path');
+          const yaml = require('js-yaml');
+          const { execSync } = require('child_process');
+          const { Octokit } = require('@octokit/rest');
+
+          class CEOSBootstrapper {
+            constructor() {
+              this.octokit = new Octokit({
+                auth: process.env.CEOS_PAT || process.env.GITHUB_TOKEN
+              });
+              this.dryRun = process.env.DRY_RUN === 'true';
+              this.repoName = process.env.REPOSITORY_NAME;
+            }
+
+            async loadConfiguration() {
+              // Load global bootstrap configuration
+              let globalConfig = {};
+              if (fs.existsSync('bootstrap-config.yml')) {
+                globalConfig = yaml.load(fs.readFileSync('bootstrap-config.yml', 'utf8'));
+              }
+
+              // Load repositories list
+              let repositories = {};
+              if (fs.existsSync('repositories.yml')) {
+                const repoConfig = yaml.load(fs.readFileSync('repositories.yml', 'utf8'));
+                repositories = repoConfig.repositories.reduce((acc, repo) => {
+                  acc[repo.name] = repo;
+                  return acc;
+                }, {});
+              }
+
+              // Load repository-specific configuration
+              let repoConfig = {};
+              const repoConfigPath = `meta-config/${this.repoName}/config.yml`;
+              if (fs.existsSync(repoConfigPath)) {
+                repoConfig = yaml.load(fs.readFileSync(repoConfigPath, 'utf8'));
+              }
+
+              return {
+                global: globalConfig,
+                repository: repositories[this.repoName] || {},
+                specific: repoConfig
+              };
+            }
+
+            async checkRepositoryExists(owner, repo) {
+              try {
+                await this.octokit.rest.repos.get({ owner, repo });
+                return true;
+              } catch (error) {
+                if (error.status === 404) {
+                  return false;
+                }
+                throw error;
+              }
+            }
+
+            async createRepository(config) {
+              const { owner, name, description, private: isPrivate = true } = config.repository;
+              
+              console.log(`Creating repository: ${owner}/${name}`);
+              
+              if (this.dryRun) {
+                console.log(`[DRY RUN] Would create repository ${owner}/${name}`);
+                return;
+              }
+
+              try {
+                await this.octokit.rest.repos.createForAuthenticatedUser({
+                  name,
+                  description: description || `CEOS managed repository: ${name}`,
+                  private: isPrivate,
+                  auto_init: true,
+                  gitignore_template: config.specific.gitignore_template || 'Node'
+                });
+                console.log(`✅ Repository created: ${owner}/${name}`);
+              } catch (error) {
+                console.error(`❌ Failed to create repository: ${error.message}`);
+                throw error;
+              }
+            }
+
+            async cloneRepository(config) {
+              const { owner, name } = config.repository;
+              const repoPath = `./temp-repos/${name}`;
+
+              console.log(`Cloning repository: ${owner}/${name}`);
+
+              if (fs.existsSync(repoPath)) {
+                execSync(`rm -rf ${repoPath}`);
+              }
+
+              fs.mkdirSync('./temp-repos', { recursive: true });
+
+              try {
+                const cloneUrl = `https://x-access-token:${process.env.CEOS_PAT}@github.com/${owner}/${name}.git`;
+                execSync(`git clone ${cloneUrl} ${repoPath}`, { stdio: 'inherit' });
+                return repoPath;
+              } catch (error) {
+                console.error(`❌ Failed to clone repository: ${error.message}`);
+                throw error;
+              }
+            }
+
+            async applyTemplates(repoPath, config) {
+              console.log('Applying templates and configurations...');
+
+              const templatesDir = './templates';
+              if (!fs.existsSync(templatesDir)) {
+                console.log('No templates directory found, skipping template application');
+                return;
+              }
+
+              // Apply global templates
+              if (fs.existsSync(`${templatesDir}/global`)) {
+                this.copyTemplateFiles(`${templatesDir}/global`, repoPath, config);
+              }
+
+              // Apply repository-specific templates
+              const repoTemplateDir = `${templatesDir}/${this.repoName}`;
+              if (fs.existsSync(repoTemplateDir)) {
+                this.copyTemplateFiles(repoTemplateDir, repoPath, config);
+              }
+
+              // Apply meta-config files
+              const metaConfigDir = `./meta-config/${this.repoName}`;
+              if (fs.existsSync(metaConfigDir)) {
+                this.copyTemplateFiles(metaConfigDir, repoPath, config, { exclude: ['config.yml'] });
+              }
+            }
+
+            copyTemplateFiles(sourceDir, targetDir, config, options = {}) {
+              const { exclude = [] } = options;
+
+              const copyRecursive = (src, dest) => {
+                const items = fs.readdirSync(src);
+
+                items.forEach(item => {
+                  if (exclude.includes(item)) return;
+
+                  const srcPath = path.join(src, item);
+                  const destPath = path.join(dest, item);
+                  const stat = fs.statSync(srcPath);
+
+                  if (stat.isDirectory()) {
+                    fs.mkdirSync(destPath, { recursive: true });
+                    copyRecursive(srcPath, destPath);
+                  } else {
+                    let content = fs.readFileSync(srcPath, 'utf8');
+                    
+                    // Template variable replacement
+                    content = this.replaceTemplateVariables(content, config);
+                    
+                    fs.writeFileSync(destPath, content);
+                    console.log(`📄 Applied template: ${item}`);
+                  }
+                });
+              };
+
+              copyRecursive(sourceDir, targetDir);
+            }
+
+            replaceTemplateVariables(content, config) {
+              const variables = {
+                REPO_NAME: this.repoName,
+                REPO_OWNER: config.repository.owner,
+                REPO_DESCRIPTION: config.repository.description || '',
+                BOOTSTRAP_VERSION: process.env.BOOTSTRAP_VERSION,
+                TIMESTAMP: new Date().toISOString(),
+                ...config.global.variables || {},
+                ...config.specific.variables || {}
+              };
+
+              let result = content;
+              Object.entries(variables).forEach(([key, value]) => {
+                const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+                result = result.replace(regex, value);
+              });
+
+              return result;
+            }
+
+            async runProvisioningScripts(repoPath, config) {
+              console.log('Running provisioning scripts...');
+
+              // Run global provisioning scripts
+              const globalScriptsDir = './provisioning/global';
+              if (fs.existsSync(globalScriptsDir)) {
+                await this.executeScripts(globalScriptsDir, repoPath, config);
+              }
+
+              // Run repository-specific provisioning scripts
+              const repoScriptsDir = `./provisioning/${this.repoName}`;
+              if (fs.existsSync(repoScriptsDir)) {
+                await this.executeScripts(repoScriptsDir, repoPath, config);
+              }
+
+              // Run inline scripts from configuration
+              if (config.specific.provisioning?.scripts) {
+                for (const script of config.specific.provisioning.scripts) {
+                  console.log(`🔧 Running inline script: ${script.name}`);
+                  await this.executeInlineScript(script, repoPath, config);
+                }
+              }
+            }
+
+            async executeScripts(scriptsDir, repoPath, config) {
+              const scripts = fs.readdirSync(scriptsDir)
+                .filter(file => file.endsWith('.sh') || file.endsWith('.js'))
+                .sort();
+
+              for (const script of scripts) {
+                console.log(`🔧 Running script: ${script}`);
+                await this.executeScript(path.join(scriptsDir, script), repoPath, config);
+              }
+            }
+
+            async executeScript(scriptPath, repoPath, config) {
+              if (this.dryRun) {
+                console.log(`[DRY RUN] Would execute script: ${scriptPath}`);
+                return;
+              }
+
+              const env = {
+                ...process.env,
+                REPO_PATH: repoPath,
+                REPO_NAME: this.repoName,
+                REPO_OWNER: config.repository.owner,
+                BOOTSTRAP_CONFIG: JSON.stringify(config)
+              };
+
+              try {
+                if (scriptPath.endsWith('.sh')) {
+                  execSync(`chmod +x ${scriptPath}`);
+                  execSync(`bash ${scriptPath}`, { 
+                    cwd: repoPath, 
+                    stdio: 'inherit', 
+                    env 
+                  });
+                } else if (scriptPath.endsWith('.js')) {
+                  execSync(`node ${scriptPath}`, { 
+                    cwd: repoPath, 
+                    stdio: 'inherit', 
+                    env 
+                  });
+                }
+                console.log(`✅ Script completed: ${path.basename(scriptPath)}`);
+              } catch (error) {
+                console.error(`❌ Script failed: ${path.basename(scriptPath)} - ${error.message}`);
+                throw error;
+              }
+            }
+
+            async executeInlineScript(script, repoPath, config) {
+              if (this.dryRun) {
+                console.log(`[DRY RUN] Would execute inline script: ${script.name}`);
+                return;
+              }
+
+              const env = {
+                ...process.env,
+                REPO_PATH: repoPath,
+                REPO_NAME: this.repoName,
+                REPO_OWNER: config.repository.owner,
+                BOOTSTRAP_CONFIG: JSON.stringify(config)
+              };
+
+              try {
+                execSync(script.command, { 
+                  cwd: repoPath, 
+                  stdio: 'inherit', 
+                  env 
+                });
+                console.log(`✅ Inline script completed: ${script.name}`);
+              } catch (error) {
+                console.error(`❌ Inline script failed: ${script.name} - ${error.message}`);
+                throw error;
+              }
+            }
+
+            async commitAndPush(repoPath, config) {
+              console.log('Committing and pushing changes...');
+
+              if (this.dryRun) {
+                console.log('[DRY RUN] Would commit and push changes');
+                return;
+              }
+
+              try {
+                // Configure git
+                execSync(`git config user.name "CEOS Bootstrap"`, { cwd: repoPath });
+                execSync(`git config user.email "ceos-bootstrap@noreply.github.com"`, { cwd: repoPath });
+
+                // Check for changes
+                try {
+                  execSync('git diff --exit-code', { cwd: repoPath, stdio: 'pipe' });
+                  execSync('git diff --cached --exit-code', { cwd: repoPath, stdio: 'pipe' });
+                  console.log('No changes detected, skipping commit');
+                  return;
+                } catch {
+                  // Changes detected, continue with commit
+                }
+
+                // Add all changes
+                execSync('git add .', { cwd: repoPath });
+
+                // Commit changes
+                const commitMessage = "chore: CEOS bootstrap update\\n\\n" +
+                  "- Applied templates and configurations\\n" +
+                  `- Bootstrap version: ${process.env.BOOTSTRAP_VERSION}\\n` +
+                  `- Timestamp: ${new Date().toISOString()}\\n` +
+                  `- Triggered by: ${process.env.GITHUB_ACTOR || 'automated'}\\n\\n` +
+                  "[skip ci]";
+
+                execSync(`git commit -m "${commitMessage}"`, { cwd: repoPath });
+
+                // Push changes
+                if (config.specific.auto_push !== false) {
+                  execSync('git push origin main', { cwd: repoPath });
+                  console.log('✅ Changes pushed to repository');
+                } else {
+                  console.log('⏸️ Auto-push disabled, changes committed locally only');
+                }
+
+              } catch (error) {
+                console.error(`❌ Failed to commit/push: ${error.message}`);
+                throw error;
+              }
+            }
+
+            async bootstrap() {
+              try {
+                console.log(`🚀 Starting bootstrap for repository: ${this.repoName}`);
+
+                const config = await this.loadConfiguration();
+                console.log('Configuration loaded:', JSON.stringify(config, null, 2));
+
+                // Check if repository exists
+                const { owner, name } = config.repository;
+                const repoExists = await this.checkRepositoryExists(owner, name);
+
+                if (!repoExists) {
+                  await this.createRepository(config);
+                  // Wait a moment for repository to be fully created
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+
+                // Clone repository
+                const repoPath = await this.cloneRepository(config);
+
+                // Apply templates
+                await this.applyTemplates(repoPath, config);
+
+                // Run provisioning scripts
+                await this.runProvisioningScripts(repoPath, config);
+
+                // Commit and push changes
+                await this.commitAndPush(repoPath, config);
+
+                console.log(`✅ Bootstrap completed for repository: ${this.repoName}`);
+
+              } catch (error) {
+                console.error(`❌ Bootstrap failed for repository: ${this.repoName}`, error);
+                process.exit(1);
+              }
+            }
+          }
+
+          // Execute bootstrap
+          const bootstrapper = new CEOSBootstrapper();
+          bootstrapper.bootstrap();
+          EOF
+
+          node bootstrap-repo.js
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf ./temp-repos
+          rm -f bootstrap-repo.js detect-changes.js
+
+      - name: Report Results
+        if: always()
+        run: |
+          echo "## Bootstrap Results for ${{ matrix.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: ${{ matrix.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry Run: ${{ github.event.inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date -Iseconds)" >> $GITHUB_STEP_SUMMARY
+
+  summary:
+    name: Bootstrap Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, bootstrap-repositories]
+    if: always()
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# CEOS Meta-Repo Bootstrap Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Trigger Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Detection Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Has Changes**: ${{ needs.detect-changes.outputs.has-changes }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changed Repositories**: ${{ needs.detect-changes.outputs.changed-repos }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Bootstrap Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Detection Job**: ${{ needs.detect-changes.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bootstrap Job**: ${{ needs.bootstrap-repositories.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the individual repository bootstrap results above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Check the target repositories for applied changes" >> $GITHUB_STEP_SUMMARY
+          echo "3. Monitor the GitHub Actions in the bootstrapped repositories" >> $GITHUB_STEP_SUMMARY
+          echo "4. Update configurations as needed for future bootstraps" >> $GITHUB_STEP_SUMMARY

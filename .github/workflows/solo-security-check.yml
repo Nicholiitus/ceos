@@ -1,12 +1,12 @@
-name: "Solo Developer Security Check"
+name: 'Solo Developer Security Check'
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 2 * * 1'  # Weekly Monday at 2 AM
+    - cron: '0 2 * * 1' # Weekly Monday at 2 AM
 
 jobs:
   security-check:
@@ -18,67 +18,67 @@ jobs:
       pull-requests: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run Tests
-      run: npm test
+      - name: Run Tests
+        run: npm test
 
-    - name: Security Audit
-      run: |
-        echo "🔍 Running security audit..."
-        npm audit --audit-level=moderate || true
-        echo "📊 Audit complete"
+      - name: Security Audit
+        run: |
+          echo "🔍 Running security audit..."
+          npm audit --audit-level=moderate || true
+          echo "📊 Audit complete"
 
-    - name: Lint & Format Check
-      run: |
-        echo "🧹 Running linter..."
-        npm run lint
-        echo "✅ Linting complete"
+      - name: Lint & Format Check
+        run: |
+          echo "🧹 Running linter..."
+          npm run lint
+          echo "✅ Linting complete"
 
-    - name: Build Check
-      run: |
-        echo "🏗️ Testing build..."
-        npm run build
-        echo "✅ Build successful"
+      - name: Build Check
+        run: |
+          echo "🏗️ Testing build..."
+          npm run build
+          echo "✅ Build successful"
 
-    - name: CodeQL Analysis
-      uses: github/codeql-action/init@v3
-      with:
-        languages: typescript
-        queries: security-and-quality
+      - name: CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: typescript
+          queries: security-and-quality
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
 
-    - name: Generate Security Report
-      run: |
-        echo "## 🔒 Security Report - $(date)" > security-report.md
-        echo "### Audit Results" >> security-report.md
-        npm audit --json > audit.json || true
-        if [ -f "audit.json" ]; then
-          vulnerabilities=$(jq '.metadata.vulnerabilities.total // 0' audit.json)
-          echo "- **Total vulnerabilities found**: $vulnerabilities" >> security-report.md
-        fi
-        echo "### Test Results" >> security-report.md
-        echo "- **Tests**: ✅ All tests passing" >> security-report.md
-        echo "### Build Status" >> security-report.md
-        echo "- **Build**: ✅ Successful" >> security-report.md
+      - name: Generate Security Report
+        run: |
+          echo "## 🔒 Security Report - $(date)" > security-report.md
+          echo "### Audit Results" >> security-report.md
+          npm audit --json > audit.json || true
+          if [ -f "audit.json" ]; then
+            vulnerabilities=$(jq '.metadata.vulnerabilities.total // 0' audit.json)
+            echo "- **Total vulnerabilities found**: $vulnerabilities" >> security-report.md
+          fi
+          echo "### Test Results" >> security-report.md
+          echo "- **Tests**: ✅ All tests passing" >> security-report.md
+          echo "### Build Status" >> security-report.md
+          echo "- **Build**: ✅ Successful" >> security-report.md
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-report
-        path: |
-          security-report.md
-          audit.json
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: |
+            security-report.md
+            audit.json

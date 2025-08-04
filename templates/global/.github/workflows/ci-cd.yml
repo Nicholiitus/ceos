@@ -1,0 +1,181 @@
+name: CI/CD Pipeline - {{ REPO_NAME }}
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Test and Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Linting
+        run: npm run lint
+
+      - name: Run Tests
+        run: npm run test:coverage
+
+      - name: Upload Coverage Reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: "{{ REPO_NAME }}-coverage"
+
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Security Audit
+        run: npm audit --audit-level=moderate
+
+      - name: Run Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: '{{ REPO_NAME }}'
+          path: '.'
+          format: 'JSON'
+
+  build:
+    name: Build and Package
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and Push Docker Image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    steps:
+      - name: Deploy to Development Environment
+        run: |
+          echo "🚀 Deploying {{ REPO_NAME }} to development environment"
+          echo "Image digest: ${{ needs.build.outputs.image-digest }}"
+          # Add your deployment commands here
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    steps:
+      - name: Deploy to Staging Environment
+        run: |
+          echo "🚀 Deploying {{ REPO_NAME }} to staging environment"
+          echo "Image digest: ${{ needs.build.outputs.image-digest }}"
+          # Add your deployment commands here
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Deploy to Production Environment
+        run: |
+          echo "🚀 Deploying {{ REPO_NAME }} to production environment"
+          echo "Image digest: ${{ needs.build.outputs.image-digest }}"
+          # Add your deployment commands here
+
+  notify:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [test, security, build]
+    if: always()
+    steps:
+      - name: Notify Deployment Status
+        uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL != ''
+        with:
+          status: ${{ job.status }}
+          text: |
+            {{ REPO_NAME }} Pipeline Status: ${{ job.status }}
+            - Tests: ${{ needs.test.result }}
+            - Security: ${{ needs.security.result }}
+            - Build: ${{ needs.build.result }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
