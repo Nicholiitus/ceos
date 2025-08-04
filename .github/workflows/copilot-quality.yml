@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: Copilot Code Review
-        uses: github/super-linter@v5
+        uses: github/super-linter@v7
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
