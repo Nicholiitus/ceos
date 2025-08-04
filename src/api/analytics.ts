@@ -16,3 +16,4 @@ router.get('/metrics', (req, res) => {
 });
 
 export { router as analyticsRoutes };
+

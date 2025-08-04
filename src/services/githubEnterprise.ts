@@ -1,3 +1,4 @@
+import { Octokit } from '@octokit/rest';
 import axios, { AxiosInstance } from 'axios';
 import { logger } from '../utils/logger';
 
@@ -14,14 +15,23 @@ export interface GitHubEnterpriseConfig {
 
 export class GitHubEnterpriseService {
   private axiosInstance: AxiosInstance;
+  private octokit: Octokit;
   private config: GitHubEnterpriseConfig;
 
   constructor(config: GitHubEnterpriseConfig) {
     this.config = config;
+    
+    // Initialize Octokit
+    this.octokit = new Octokit({
+      baseUrl: config.apiUrl,
+      auth: config.personalAccessToken,
+      userAgent: 'CEOS/1.0.0',
+    });
+    
     this.axiosInstance = axios.create({
       baseURL: config.apiUrl,
       headers: {
-        'Accept': 'application/vnd.github.v3+json',
+        Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'CEOS/1.0.0',
       },
       timeout: 30000,
@@ -33,9 +43,11 @@ export class GitHubEnterpriseService {
 
   private setupAuthentication(): void {
     if (this.config.personalAccessToken) {
-      this.axiosInstance.defaults.headers.common['Authorization'] = 
+      this.axiosInstance.defaults.headers.common['Authorization'] =
         `token ${this.config.personalAccessToken}`;
-      logger.info('GitHub Enterprise authentication configured with Personal Access Token');
+      logger.info(
+        'GitHub Enterprise authentication configured with Personal Access Token'
+      );
     } else {
       logger.warn('No GitHub Enterprise authentication configured');
     }
@@ -44,7 +56,7 @@ export class GitHubEnterpriseService {
   private setupInterceptors(): void {
     // Request interceptor
     this.axiosInstance.interceptors.request.use(
-      (config) => {
+      config => {
         logger.debug('GitHub API request', {
           method: config.method,
           url: config.url,
@@ -52,7 +64,7 @@ export class GitHubEnterpriseService {
         });
         return config;
       },
-      (error) => {
+      error => {
         logger.error('GitHub API request error', error);
         return Promise.reject(error);
       }
@@ -60,14 +72,14 @@ export class GitHubEnterpriseService {
 
     // Response interceptor
     this.axiosInstance.interceptors.response.use(
-      (response) => {
+      response => {
         logger.debug('GitHub API response', {
           status: response.status,
           headers: response.headers,
         });
         return response;
       },
-      (error) => {
+      error => {
         logger.error('GitHub API response error', {
           status: error.response?.status,
           message: error.response?.data?.message,
@@ -132,10 +144,15 @@ export class GitHubEnterpriseService {
   // Get Copilot usage for organization
   async getCopilotUsage(org: string) {
     try {
-      const response = await this.axiosInstance.get(`/orgs/${org}/copilot/usage`);
+      const response = await this.axiosInstance.get(
+        `/orgs/${org}/copilot/usage`
+      );
       return response.data;
     } catch (error) {
-      logger.error(`Failed to get Copilot usage for organization ${org}`, error);
+      logger.error(
+        `Failed to get Copilot usage for organization ${org}`,
+        error
+      );
       throw error;
     }
   }
@@ -143,10 +160,15 @@ export class GitHubEnterpriseService {
   // Get Copilot seats for organization
   async getCopilotSeats(org: string) {
     try {
-      const response = await this.axiosInstance.get(`/orgs/${org}/copilot/billing/seats`);
+      const response = await this.axiosInstance.get(
+        `/orgs/${org}/copilot/billing/seats`
+      );
       return response.data;
     } catch (error) {
-      logger.error(`Failed to get Copilot seats for organization ${org}`, error);
+      logger.error(
+        `Failed to get Copilot seats for organization ${org}`,
+        error
+      );
       throw error;
     }
   }
@@ -154,12 +176,18 @@ export class GitHubEnterpriseService {
   // Add Copilot seat for user
   async addCopilotSeat(org: string, username: string) {
     try {
-      const response = await this.axiosInstance.post(`/orgs/${org}/copilot/billing/selected_users`, {
-        selected_usernames: [username],
-      });
+      const response = await this.axiosInstance.post(
+        `/orgs/${org}/copilot/billing/selected_users`,
+        {
+          selected_usernames: [username],
+        }
+      );
       return response.data;
     } catch (error) {
-      logger.error(`Failed to add Copilot seat for user ${username} in organization ${org}`, error);
+      logger.error(
+        `Failed to add Copilot seat for user ${username} in organization ${org}`,
+        error
+      );
       throw error;
     }
   }
@@ -167,14 +195,20 @@ export class GitHubEnterpriseService {
   // Remove Copilot seat for user
   async removeCopilotSeat(org: string, username: string) {
     try {
-      const response = await this.axiosInstance.delete(`/orgs/${org}/copilot/billing/selected_users`, {
-        data: {
-          selected_usernames: [username],
-        },
-      });
+      const response = await this.axiosInstance.delete(
+        `/orgs/${org}/copilot/billing/selected_users`,
+        {
+          data: {
+            selected_usernames: [username],
+          },
+        }
+      );
       return response.data;
     } catch (error) {
-      logger.error(`Failed to remove Copilot seat for user ${username} in organization ${org}`, error);
+      logger.error(
+        `Failed to remove Copilot seat for user ${username} in organization ${org}`,
+        error
+      );
       throw error;
     }
   }
@@ -209,7 +243,8 @@ export function createGitHubEnterpriseService(): GitHubEnterpriseService {
   const config: GitHubEnterpriseConfig = {
     baseUrl: process.env.GITHUB_ENTERPRISE_URL || 'https://github.com',
     apiUrl: process.env.GITHUB_API_URL || 'https://api.github.com',
-    graphqlUrl: process.env.GITHUB_GRAPHQL_URL || 'https://api.github.com/graphql',
+    graphqlUrl:
+      process.env.GITHUB_GRAPHQL_URL || 'https://api.github.com/graphql',
     personalAccessToken: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
     appId: process.env.GITHUB_APP_ID,
     clientId: process.env.GITHUB_CLIENT_ID,

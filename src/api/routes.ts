@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { healthRoutes } from './health';
-import { orchestrationRoutes } from './orchestration';
 import { analyticsRoutes } from './analytics';
 import { authRoutes } from './auth';
+import { healthRoutes } from './health';
+import { orchestrationRoutes } from './orchestration';
 
 const router = Router();
 
@@ -37,3 +37,4 @@ router.get(`${API_VERSION}/docs`, (req, res) => {
 });
 
 export { router as apiRoutes };
+

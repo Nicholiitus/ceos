@@ -3,9 +3,11 @@
 # CEOS Development Guidelines
 
 ## Project Context
+
 This is the Copilot Enterprise Orchestration System (CEOS), an enterprise-grade platform for managing GitHub Copilot deployments across large organizations.
 
 ## Coding Standards
+
 - Use TypeScript for all new backend services
 - Follow enterprise security best practices
 - Implement comprehensive error handling and logging
@@ -14,6 +16,7 @@ This is the Copilot Enterprise Orchestration System (CEOS), an enterprise-grade 
 - Follow SOLID principles
 
 ## Architecture Patterns
+
 - Microservices architecture with clear service boundaries
 - Event-driven communication between services
 - API-first design with OpenAPI specifications
@@ -21,6 +24,7 @@ This is the Copilot Enterprise Orchestration System (CEOS), an enterprise-grade 
 - Circuit breaker pattern for external dependencies
 
 ## Security Requirements
+
 - All APIs must be authenticated and authorized
 - Input validation on all endpoints
 - Secure secret management
@@ -28,12 +32,14 @@ This is the Copilot Enterprise Orchestration System (CEOS), an enterprise-grade 
 - Audit logging for all operations
 
 ## Documentation
+
 - Document all public APIs with OpenAPI specs
 - Include inline code documentation
 - Update README files when adding new features
 - Maintain architecture decision records (ADRs)
 
 ## Enterprise Integration
+
 - Support for enterprise SSO providers
 - Integration with enterprise monitoring tools
 - Compliance with organizational policies

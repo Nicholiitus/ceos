@@ -15,18 +15,20 @@ export const logger = winston.createLogger({
   format: combine(
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     errors({ stack: true }),
-    process.env.NODE_ENV === 'production' ? json() : combine(colorize(), consoleFormat)
+    process.env.NODE_ENV === 'production'
+      ? json()
+      : combine(colorize(), consoleFormat)
   ),
   defaultMeta: { service: 'ceos' },
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ 
-      filename: 'logs/error.log', 
+    new winston.transports.File({
+      filename: 'logs/error.log',
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     }),
-    new winston.transports.File({ 
+    new winston.transports.File({
       filename: 'logs/combined.log',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
@@ -36,7 +38,9 @@ export const logger = winston.createLogger({
 
 // If we're not in production, log to the console with simple format
 if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: combine(colorize(), consoleFormat)
-  }));
+  logger.add(
+    new winston.transports.Console({
+      format: combine(colorize(), consoleFormat),
+    })
+  );
 }

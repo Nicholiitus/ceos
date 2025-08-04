@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { logger } from '../utils/logger';
 
 export interface AppError extends Error {
@@ -10,7 +10,8 @@ export const errorHandler = (
   error: AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+  _next: NextFunction
 ): void => {
   const { statusCode = 500, message, stack } = error;
 

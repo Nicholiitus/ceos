@@ -11,14 +11,34 @@
   "git.confirmSync": false,
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "typescript.preferences.quoteStyle": "single",
+  "typescript.suggest.autoImports": true,
+  "typescript.suggest.includeCompletionsForModuleExports": true,
+  "typescript.suggest.includeAutomaticOptionalChainCompletions": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.inlayHints.parameterNames.enabled": "all",
+  "typescript.inlayHints.parameterTypes.enabled": true,
+  "typescript.inlayHints.variableTypes.enabled": true,
+  "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit",
+    "source.fixAll": "explicit"
   },
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.inlineSuggest.enabled": true,
   "eslint.validate": [
     "typescript",
     "javascript"
   ],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
+  "eslint.run": "onSave",
+  "editor.rulers": [80, 120],
+  "security.workspace.trust.untrustedFiles": "prompt",
   "files.associations": {
     "*.env*": "dotenv"
   },
@@ -32,5 +52,33 @@
     "yaml": true,
     "plaintext": false,
     "markdown": true
-  }
+  },
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": true,
+    "scminput": false
+  },
+  "github.copilot.advanced": {
+    "secret_scanning": true,
+    "listCount": 10,
+    "inlineSuggestCount": 3
+  },
+  "github.copilot.chat.localeOverride": "en",
+  "github.copilot.chat.welcomeMessage": "Welcome to CEOS development! I'm here to help with enterprise-grade GitHub Copilot orchestration code.",
+  "github.copilot.preferredAccount": "Nicholiitus",
+  "github.copilot.editor.enableAutoCompletions": true,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/.git": true
+  },
+  "files.exclude": {
+    "**/dist": true,
+    "**/coverage": true
+  },
+  "python.analysis.extraPaths": [
+    "c:\\Users\\Nic\\.vscode\\extensions\\ms-security.ms-sentinel-0.1.0\\python"
+  ]
 }

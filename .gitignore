@@ -9,12 +9,29 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment files
+# Environment files - Security Critical
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.staging
+.env.backup
+*.env.backup
+
+# Secrets and credentials - Security Critical
+secrets/
+private-keys/
+certificates/
+*api-key*
+*secret*
+*token*
+*password*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
 # Logs
 logs/

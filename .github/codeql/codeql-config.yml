@@ -1,0 +1,36 @@
+name: "CEOS CodeQL Configuration"
+
+disable-default-queries: false
+
+queries:
+  - name: security-extended
+    uses: security-extended
+  - name: security-and-quality
+    uses: security-and-quality
+
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+  - exclude:
+      id: js/debugger-statement
+
+paths-ignore:
+  - "**/*.test.ts"
+  - "**/*.test.js"
+  - "**/tests/**"
+  - "**/coverage/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/*.d.ts"
+
+paths:
+  - "src/**"
+  - "scripts/**"
+
+# Custom CodeQL queries for enterprise security
+custom-queries:
+  - name: enterprise-security
+    queries:
+      - .github/codeql/queries/hardcoded-credentials.ql
+      - .github/codeql/queries/unsafe-deserialization.ql
+      - .github/codeql/queries/sql-injection.ql

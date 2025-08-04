@@ -1,0 +1,51 @@
+# GitHub Copilot Enterprise Configuration
+# This file configures Copilot for optimal enterprise use in CEOS
+
+# Copilot Chat Custom Instructions
+copilot:
+  # Enterprise-specific context
+  context:
+    project: "CEOS - Copilot Enterprise Orchestration System"
+    architecture: "Microservices with TypeScript/Node.js"
+    security_level: "Enterprise Grade"
+    compliance: ["SOC2", "ISO27001", "GDPR"]
+    
+  # Custom slash commands for CEOS development
+  slash_commands:
+    - name: "/ceos-security"
+      description: "Review code for enterprise security best practices"
+      prompt: "Review this code for security vulnerabilities, authentication issues, and enterprise compliance requirements specific to GitHub Copilot enterprise deployments."
+      
+    - name: "/ceos-api"
+      description: "Generate REST API endpoints following CEOS patterns"
+      prompt: "Generate a REST API endpoint following CEOS architecture patterns with proper error handling, authentication, logging, and OpenAPI documentation."
+      
+    - name: "/ceos-test"
+      description: "Generate comprehensive test suites"
+      prompt: "Create comprehensive test suites including unit tests, integration tests, and security tests following CEOS testing standards."
+      
+    - name: "/ceos-deploy"
+      description: "Generate deployment configurations"
+      prompt: "Create Azure deployment configurations optimized for enterprise GitHub Copilot orchestration including scaling, monitoring, and security."
+
+  # Code completion preferences
+  code_completion:
+    enterprise_patterns: true
+    security_first: true
+    documentation_required: true
+    test_generation: true
+    
+  # Copilot Business features
+  business_features:
+    organization_wide_policies: true
+    audit_logging: true
+    content_filtering: true
+    ip_allowlisting: true
+    
+  # Enterprise integrations
+  integrations:
+    github_enterprise: true
+    azure_devops: true
+    jira: true
+    slack: true
+    teams: true

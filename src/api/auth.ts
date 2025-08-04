@@ -16,3 +16,4 @@ router.get('/profile', (req, res) => {
 });
 
 export { router as authRoutes };
+
