@@ -1,0 +1,84 @@
+name: GitHub Enterprise Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      github_enterprise_url:
+        description: 'GitHub Enterprise URL'
+        required: true
+        default: 'https://github.yourcompany.com'
+      organization:
+        description: 'Organization to sync'
+        required: true
+        default: 'your-org'
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  test-integration:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Test GitHub Enterprise Connection
+      env:
+        GITHUB_ENTERPRISE_URL: ${{ github.event.inputs.github_enterprise_url }}
+        GITHUB_API_URL: ${{ github.event.inputs.github_enterprise_url }}/api/v3
+        GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GHE_PERSONAL_ACCESS_TOKEN }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      run: |
+        npm run test:integration
+    
+    - name: Validate Organization Access
+      env:
+        GITHUB_ENTERPRISE_URL: ${{ github.event.inputs.github_enterprise_url }}
+        GITHUB_API_URL: ${{ github.event.inputs.github_enterprise_url }}/api/v3
+        GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GHE_PERSONAL_ACCESS_TOKEN }}
+        ORGANIZATION: ${{ github.event.inputs.organization }}
+      run: |
+        # Test API connectivity
+        curl -H "Authorization: token $GITHUB_PERSONAL_ACCESS_TOKEN" \
+             "$GITHUB_API_URL/orgs/$ORGANIZATION" \
+             --fail-with-body
+
+  sync-copilot-data:
+    needs: test-integration
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Sync Copilot Usage Data
+      env:
+        GITHUB_ENTERPRISE_URL: ${{ github.event.inputs.github_enterprise_url }}
+        GITHUB_API_URL: ${{ github.event.inputs.github_enterprise_url }}/api/v3
+        GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GHE_PERSONAL_ACCESS_TOKEN }}
+        ORGANIZATION: ${{ github.event.inputs.organization }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      run: |
+        node dist/scripts/sync-copilot-data.js

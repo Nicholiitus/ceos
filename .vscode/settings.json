@@ -1,0 +1,37 @@
+{
+  "github-enterprise.uri": "https://github.yourcompany.com",
+  "githubPullRequests.remotes": [
+    "origin",
+    "upstream"
+  ],
+  "githubPullRequests.defaultMergeMethod": "squash",
+  "github.gitAuthentication": true,
+  "github.gitProtocol": "https",
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "typescript.preferences.quoteStyle": "single",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.validate": [
+    "typescript",
+    "javascript"
+  ],
+  "files.associations": {
+    "*.env*": "dotenv"
+  },
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#1e3a8a",
+    "activityBar.foreground": "#ffffff"
+  },
+  "extensions.ignoreRecommendations": false,
+  "copilot.enable": {
+    "*": true,
+    "yaml": true,
+    "plaintext": false,
+    "markdown": true
+  }
+}

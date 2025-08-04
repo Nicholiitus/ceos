@@ -1,0 +1,22 @@
+{
+  "recommendations": [
+    "GitHub.vscode-pull-request-github",
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "GitHub.remotehub",
+    "GitHub.vscode-github-actions",
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.vscode-json",
+    "redhat.vscode-yaml",
+    "ms-vscode-remote.remote-containers",
+    "ms-azuretools.vscode-docker",
+    "humao.rest-client",
+    "mikestead.dotenv",
+    "ms-vscode.test-adapter-converter",
+    "hbenl.vscode-test-explorer"
+  ],
+  "unwantedRecommendations": []
+}

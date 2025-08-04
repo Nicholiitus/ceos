@@ -36,7 +36,7 @@ CEOS is built using a microservices architecture with the following key componen
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/ceos.git
+git clone https://github.com/Nicholiitus/ceos.git
 cd ceos
 
 # Install dependencies
@@ -44,6 +44,9 @@ npm install
 
 # Set up environment
 cp .env.example .env
+
+# Configure GitHub Enterprise (see docs/github-enterprise-setup.md)
+# Update .env with your GitHub Enterprise settings
 
 # Start development environment
 docker-compose up -d
@@ -59,6 +62,7 @@ docker-compose up -d
 ## Documentation
 
 - [Architecture Guide](docs/architecture.md)
+- [GitHub Enterprise Setup](docs/github-enterprise-setup.md)
 - [API Documentation](docs/api.md)
 - [Deployment Guide](docs/deployment.md)
 - [Configuration Reference](docs/configuration.md)
