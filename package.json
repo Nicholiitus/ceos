@@ -72,7 +72,7 @@
     "compression": "^1.8.1",
     "eslint": "^8.46.0",
     "eslint-config-prettier": "^8.9.0",
-    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-security": "^3.0.1",
     "express-rate-limit": "^8.0.1",
     "husky": "^8.0.3",
