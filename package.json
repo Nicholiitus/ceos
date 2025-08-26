@@ -67,7 +67,7 @@
     "@types/pg": "^8.10.2",
     "@types/redis": "^4.0.10",
     "@types/supertest": "^6.0.3",
-    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
     "@typescript-eslint/parser": "^8.38.0",
     "compression": "^1.8.1",
     "eslint": "^8.46.0",
