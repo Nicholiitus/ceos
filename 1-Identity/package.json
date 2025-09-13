@@ -39,7 +39,7 @@
     "bcryptjs": "^2.4.3",
     "pg": "^8.11.3",
     "redis": "^4.6.7",
-    "axios": "^1.4.0",
+    "axios": "^1.12.0",
     "node-cron": "^3.0.2"
   },
   "devDependencies": {
