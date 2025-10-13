@@ -43,7 +43,7 @@ jobs:
           args: --severity-threshold=medium --file=package.json
 
       - name: Upload Snyk results to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: snyk.sarif
@@ -61,7 +61,7 @@ jobs:
             --failOnCVSS 7
 
       - name: Upload OWASP Dependency Check results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: ${{ github.workspace }}/reports/dependency-check-report.sarif
